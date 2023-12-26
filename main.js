@@ -1,41 +1,63 @@
-const { app, BrowserWindow, autoUpdater } = require('electron')
-const {autoUpdater} = require('electron-updater')
-const log = require('electron-log')
-log.log('Application version:'+ app.getVersion());
-log.transports.file.resolvePath = () => path.join('D:/electron-auto-update/package.json', '/logs/main.log');
-const createWindow = () => {
-    const win = new BrowserWindow({
-      width: 800,
-      height: 600
-    })
-  
-    win.loadFile('index.html')
-  }
-  app.whenReady().then(() => {
-    createWindow()
-    autoUpdater.checkForUpdates();
-  })
+const { app, BrowserWindow } = require('electron');
+const { autoUpdater } = require('electron-updater');
 
-  autoUpdater.on('update-available', (info) =>{
-    log.info('update-available');
-  })
-  
-  autoUpdater.on('checking-for-update', () =>{
-    log.info('checking-for-update');
-  })
-  
-  autoUpdater.on('update-available', (info) =>{
-    log.info('update-available');
-  })
-  
-  autoUpdater.on('error', (err) =>{
-    log.info('error'+ err);
-  })
-  
-  autoUpdater.on('download-progress', (progressTrack) =>{
-    log.info('download-progress'+ progressTrack);
-  })
+let mainWindow;
 
-  autoUpdater.on('update-downloaded', (info) =>{
-    log.info('update-downloaded');
-  })
+function createWindow() {
+    mainWindow = new BrowserWindow({
+        width: 800,
+        height: 600,
+        webPreferences: {
+            nodeIntegration: true,
+        },
+    });
+
+    mainWindow.loadFile('index.html');
+
+    mainWindow.on('closed', function () {
+        mainWindow = null;
+    });
+}
+autoUpdater.setFeedURL({
+    provider: 'github',
+    owner: 'reshmi-parvin',
+    repo: 'electron-auto-update',
+});
+app.whenReady().then(() => {
+    createWindow();
+    autoUpdater.checkForUpdatesAndNotify(); // Check for updates on app start
+
+    app.on('activate', function () {
+        if (mainWindow === null) createWindow();
+    });
+});
+
+app.on('window-all-closed', function () {
+    if (process.platform !== 'darwin') app.quit();
+});
+
+// Auto-update events
+autoUpdater.on('checking-for-update', () => {
+    console.log('Checking for update...');
+});
+
+autoUpdater.on('update-available', (info) => {
+    console.log('Update available:', info);
+});
+
+autoUpdater.on('update-not-available', () => {
+    console.log('No update available.');
+});
+
+autoUpdater.on('error', (err) => {
+    console.error('Error in auto-updater:', err);
+});
+
+autoUpdater.on('download-progress', (progressObj) => {
+    console.log(`Download speed: ${progressObj.bytesPerSecond} - Downloaded ${progressObj.percent}%`);
+});
+
+autoUpdater.on('update-downloaded', (info) => {
+    console.log('Update downloaded:', info);
+    autoUpdater.quitAndInstall();
+});
